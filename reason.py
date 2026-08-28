@@ -674,7 +674,7 @@ class CreditBoxEngine:
                         score += 0.2
                         reasons.append({
                             "type": "attribute",
-                            "detail": f"loan_min={min_val} ≤ ${la} loan",
+                            "detail": f"min_loan_amount={min_val} ≤ ${la} loan",
                             "source_sheet": min_recs[0]["source_sheet"],
                             "source_row": min_recs[0]["source_row"],
                         })
@@ -693,7 +693,7 @@ class CreditBoxEngine:
                             score += 0.2
                             reasons.append({
                                 "type": "attribute",
-                                "detail": f"loan_max=${max_val:,.0f} ≥ ${la} loan",
+                                "detail": f"max_loan_amount=${max_val:,.0f} ≥ ${la} loan",
                                 "source_sheet": max_recs[0]["source_sheet"],
                                 "source_row": max_recs[0]["source_row"],
                             })
@@ -701,7 +701,7 @@ class CreditBoxEngine:
                             score -= 1.0
                             reasons.append({
                                 "type": "attribute",
-                                "detail": f"loan_max=${max_val:,.0f} < requested ${la} (insufficient capacity)",
+                                "detail": f"max_loan_amount=${max_val:,.0f} < requested ${la} (insufficient capacity)",
                             })
 
             # Check experience

@@ -226,9 +226,9 @@ def _parse_fico_internal(raw_text, attr_name=None):
     try:
         stripped = clean.replace("+", "").replace("%", "").strip()
         val = float(stripped)
-        if attr_name == "fico_at_max_ltv":
+        if attr_name == "fico_requirement_at_max_ltv":
             return {"tiers": [{"min_fico": int(val)}], "note_type": "single_value", "notes": f"FICO ≥{int(val)}", "raw": raw}
-        elif attr_name in ("ltv_purchase_max", "ltv_cashout_max"):
+        elif attr_name in ("max__ltv_purchase", "max__ltv_cash_out_refi"):
             return {"tiers": [{"max_ltv": int(val)}], "note_type": "single_value", "notes": f"LTV ≤{int(val)}%", "raw": raw}
         return {"tiers": [{"value": val}], "note_type": "single_value", "notes": str(val), "raw": raw}
     except ValueError:
@@ -308,8 +308,8 @@ def parse_text(raw_text: str, attr_name: str = None) -> dict:
     """Parse any freeform text using the appropriate parser."""
     if attr_name == "state_coverage":
         return parse_state_coverage(raw_text)
-    if attr_name in ("fico_at_max_ltv", "fico_qualification", "dscr_range",
-                      "ltv_purchase_max", "ltv_cashout_max"):
+    if attr_name in ("fico_requirement_at_max_ltv", "fico_qualification", "dscr__prop_dti_min_max",
+                      "max__ltv_purchase", "max__ltv_cash_out_refi"):
         return parse_fico_ltv_tiers(raw_text, attr_name)
     return {"type": "text", "raw": raw_text, "notes": ""}
 

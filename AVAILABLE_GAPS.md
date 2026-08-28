@@ -45,7 +45,7 @@
 | Component | Impact |
 |-----------|--------|
 | What: If Excel updates and corpus is re-parsed without rebuilding `llm_cache.json`, FICO/LTV tier lookups use stale LLM-parsed data. No warning. |
-| Effort: ~30 min. Stamp corpus.json with a hash of llm_cache.json. Check on load. Warn if mismatch. |
+| Effort: ~30 min. Stamp corpus.db with a hash of llm_cache.json. Check on load. Warn if mismatch. |
 | Value: Medium. Silent incorrectness is dangerous. Currently manual rebuild needed. |
 
 ## Summary
