@@ -15,9 +15,6 @@ import store
 
 CORPUS_DIR = Path(__file__).parent / "corpus"
 
-# Temporary shim for evals.py — removed in the store.py swap for evals.py (Task 5)
-load_all_from_db = store.load_all
-
 
 def _extract_experience_min(raw: str):
     """Extract numeric minimum experience from freeform text.

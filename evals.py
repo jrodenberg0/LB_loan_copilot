@@ -32,8 +32,8 @@ def run_evals(query_result, corpus=None, run_all=False):
     run_all: also run structural evals (city_map consistency, cache check).
     """
     if corpus is None:
-        from reason import load_all_from_db
-        corpus = load_all_from_db()
+        import store
+        corpus = store.load_all()
 
     evals = []
     evals.append(_eval_source_integrity(query_result, corpus))
@@ -464,8 +464,8 @@ def _eval_cache_consistency(corpus):
 def verify_query(query_result, corpus=None):
     """Run evals and attach results. Returns (query_result, all_passed)."""
     if corpus is None:
-        from reason import load_all_from_db
-        corpus = load_all_from_db()
+        import store
+        corpus = store.load_all()
     evals = run_evals(query_result, corpus)
     query_result["evals"] = [e.to_dict() for e in evals]
     query_result["eval_summary"] = summarise(evals)
@@ -478,8 +478,8 @@ if __name__ == "__main__":
     engine = CreditBoxEngine()
     result = engine.query("640 FICO Baltimore fix and flip")
 
-    with open(CORPUS_DIR / "corpus.json") as f:
-        corpus = json.load(f)
+    import store
+    corpus = store.load_all()
 
     # Structural evals (run_all=True)
     struct_evals = run_evals(result, corpus, run_all=True)
