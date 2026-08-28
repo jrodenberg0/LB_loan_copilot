@@ -1,0 +1,9 @@
+# codex/config.toml.example
+#
+# Copy this block into your Codex config (~/.codex/config.toml or your
+# project's .codex/config.toml) to register the credit-box-rag MCP server.
+# Replace /absolute/path/to/credit-box-rag with your actual checkout path.
+
+[mcp_servers.credit-box-rag]
+command = "python3"
+args = ["/absolute/path/to/credit-box-rag/mcp_server.py"]
