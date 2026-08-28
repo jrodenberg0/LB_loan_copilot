@@ -26,3 +26,14 @@ def test_layout_missing_vote_column_starts_at_col_2():
 def test_vote_column_detection_is_case_insensitive():
     ws = _make_sheet(["vote column", None, "LenderA"])
     assert _first_lender_col(ws) == 3
+
+from migrate import _attr_label_col
+
+def test_attr_label_col_is_one_before_first_lender_col_standard_layout():
+    ws = _make_sheet(["VOTE COLUMN", "Attr Label", "LenderA", "LenderB"])
+    assert _attr_label_col(ws) == 2  # column B, standard layout
+
+def test_attr_label_col_is_one_before_first_lender_col_shifted_layout():
+    ws = _make_sheet([None, "Attr Label", "Stormfield", "LenderB"])
+    # No VOTE COLUMN -> lenders start at col 2, so real headers are col 1
+    assert _attr_label_col(ws) == 1
