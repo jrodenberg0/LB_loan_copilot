@@ -46,10 +46,10 @@ credit-box-rag/
 ## Step 2: Install Dependencies
 
 ```bash
-pip install openpyxl pydantic pyyaml
+pip install -r requirements.txt
 ```
 
-That's it. Only 3 third-party packages. Everything else is stdlib.
+That's it. See `requirements.txt` for the full dependency list (note the `mcp<2` pin — mcp_server.py uses the pre-2.0 `FastMCP` API).
 
 ---
 
@@ -91,7 +91,7 @@ and 9 product types (DSCR, fix-and-flip, new construction, multifamily, bridge, 
 
 ```bash
 cd ~/Desktop/credit-box-rag
-pip install openpyxl pydantic pyyaml
+pip install -r requirements.txt
 ```
 
 ## Quick Start
@@ -312,7 +312,7 @@ lending knowledge system covering ~145 wholesale lenders and 9 product types.
 
 Setup:
   cd ~/Desktop/credit-box-rag
-  pip install openpyxl pydantic pyyaml
+  pip install -r requirements.txt
 
 To answer questions, run:
   python3 query.py "your question here"
