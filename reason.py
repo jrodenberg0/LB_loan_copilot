@@ -476,7 +476,7 @@ class CreditBoxEngine:
         # If no scenario matched, fall back to attribute-based
         if not candidate_lenders and product:
             candidate_lenders = self.attr_to_lenders.get("fico_min", set()) | \
-                                self.attr_to_lenders.get("ltv_purchase_max", set())
+                                self.attr_to_lenders.get("max__ltv_purchase", set())
         elif not candidate_lenders:
             # All lenders
             candidate_lenders = self.lenders.copy()
