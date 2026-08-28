@@ -1,5 +1,7 @@
 # Derived/proprietary data — built locally per machine via migrate.py, never committed
 corpus/corpus.db
+corpus/corpus.db-shm
+corpus/corpus.db-wal
 corpus/corpus.json
 corpus/lenders.json
 corpus/scenarios.json
