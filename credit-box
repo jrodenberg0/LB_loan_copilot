@@ -1,0 +1,4 @@
+#!/bin/bash
+# Query Master Credit Box corpus
+DIR="$(cd "$(dirname "$0")" && pwd)"
+python3 "$DIR/query.py" "$@"
