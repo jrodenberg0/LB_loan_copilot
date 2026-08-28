@@ -32,8 +32,8 @@ def run_evals(query_result, corpus=None, run_all=False):
     run_all: also run structural evals (city_map consistency, cache check).
     """
     if corpus is None:
-        from reason import load_all_from_db
-        corpus = load_all_from_db()
+        import store
+        corpus = store.load_all()
 
     evals = []
     evals.append(_eval_source_integrity(query_result, corpus))
@@ -379,23 +379,24 @@ def format_evals(evals):
 
 
 def _eval_staleness(query_result, corpus):
-    meta = corpus.get("meta", {})
-    age = meta.get("file_age_days", 0)
-    generated = meta.get("generated", "?")
-    src = meta.get("source", "?")
+    import store
+    fresh = store.get_freshness()
+    age = fresh.get("age_days")
 
-    if not age:
+    if age is None:
         return EvalResult("staleness", "WARN", "No file timestamp available")
+
+    imported_at = (fresh.get("imported_at") or "?")[:10]
 
     if age > 90:
         return EvalResult("staleness", "FAIL",
-                          f"Data {age:.0f} days old (last parsed {generated[:10]}) — exceeds 90-day threshold")
+                          f"Data {age:.0f} days old (last imported {imported_at}) — exceeds 90-day threshold")
     elif age > 30:
         return EvalResult("staleness", "WARN",
-                          f"Data {age:.0f} days old (last parsed {generated[:10]}) — exceeds 30-day freshness target")
+                          f"Data {age:.0f} days old (last imported {imported_at}) — exceeds 30-day freshness target")
     else:
         return EvalResult("staleness", "PASS",
-                          f"Data {age:.0f} days old (last parsed {generated[:10]})")
+                          f"Data {age:.0f} days old (last imported {imported_at})")
 
 
 def _eval_city_map_consistency(corpus):
@@ -464,8 +465,8 @@ def _eval_cache_consistency(corpus):
 def verify_query(query_result, corpus=None):
     """Run evals and attach results. Returns (query_result, all_passed)."""
     if corpus is None:
-        from reason import load_all_from_db
-        corpus = load_all_from_db()
+        import store
+        corpus = store.load_all()
     evals = run_evals(query_result, corpus)
     query_result["evals"] = [e.to_dict() for e in evals]
     query_result["eval_summary"] = summarise(evals)
@@ -478,8 +479,8 @@ if __name__ == "__main__":
     engine = CreditBoxEngine()
     result = engine.query("640 FICO Baltimore fix and flip")
 
-    with open(CORPUS_DIR / "corpus.json") as f:
-        corpus = json.load(f)
+    import store
+    corpus = store.load_all()
 
     # Structural evals (run_all=True)
     struct_evals = run_evals(result, corpus, run_all=True)

@@ -1,0 +1,10 @@
+{
+  "name": "credit-box-rag",
+  "displayName": "Loan Pricing Partner",
+  "version": "0.1.0",
+  "description": "Mortgage lending knowledge system for IP Loan Exchange — routes loan deals to wholesale lenders with cited source data.",
+  "author": {
+    "name": "IP Loan Exchange"
+  },
+  "mcpServers": "./mcp_server_config.json"
+}

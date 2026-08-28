@@ -441,16 +441,36 @@ def _insert_products(db, import_id, wb):
     log(db, import_id, "INFO", f"{len(PRODUCT_SHEETS)} products")
 
 
+def _first_lender_col(ws):
+    """Row 1's lender names normally start at column C (3), because column A
+    holds a 'VOTE COLUMN' placeholder. Some product sheets (observed:
+    Multi-Comm Bridge) omit that placeholder, so lender names sit one
+    column to the left, starting at column B (2). Detect which layout this
+    sheet uses instead of assuming column 3 always.
+    """
+    col1_val = ws.cell(row=1, column=1).value
+    if col1_val and "vote column" in str(col1_val).strip().lower():
+        return 3
+    return 2
+
+
+def _attr_label_col(ws):
+    """The column holding attribute-name labels (row 2+). Always one column
+    to the left of the first lender column — see _first_lender_col."""
+    return _first_lender_col(ws) - 1
+
+
 def _insert_lenders(db, import_id, wb):
     """Extract all unique lender names across all sheets."""
     all_names = set()
 
-    # Product sheets: row 1, col C+
+    # Product sheets: row 1, col C+ (or B+ for sheets without a VOTE COLUMN)
     for sheet_name in PRODUCT_SHEETS:
         if sheet_name not in wb.sheetnames:
             continue
         ws = wb[sheet_name]
-        for c in range(3, ws.max_column + 1):
+        start_col = _first_lender_col(ws)
+        for c in range(start_col, ws.max_column + 1):
             v = ws.cell(row=1, column=c).value
             if v and str(v).strip():
                 all_names.add(str(v).strip())
@@ -506,8 +526,9 @@ def _insert_attribute_defs(db, import_id, wb):
         if sheet_name not in wb.sheetnames:
             continue
         ws = wb[sheet_name]
+        label_col = _attr_label_col(ws)
         for r in range(2, ws.max_row + 1):
-            v = ws.cell(row=r, column=2).value
+            v = ws.cell(row=r, column=label_col).value
             if v and str(v).strip():
                 raw = str(v).strip()
                 # Normalize to canonical name
@@ -547,12 +568,13 @@ def _insert_attribute_defs(db, import_id, wb):
         if sheet_name not in wb.sheetnames:
             continue
         ws = wb[sheet_name]
+        label_col = _attr_label_col(ws)
         prod_id = product_ids.get(product_key)
         if not prod_id:
             continue
         order = 0
         for r in range(2, ws.max_row + 1):
-            v = ws.cell(row=r, column=2).value
+            v = ws.cell(row=r, column=label_col).value
             if v and str(v).strip():
                 raw = str(v).strip()
                 canonical = raw.lower().replace(' | ', ' ').replace('\n', ' ').strip()
@@ -594,15 +616,23 @@ def _insert_product_sheet_data(db, import_id, wb):
             continue
         ws = wb[sheet_name]
 
-        # Read lender names from row 1, col C+
+        # Read lender names from row 1, starting at the sheet's detected
+        # first lender column (usually C, but B for sheets missing the
+        # "VOTE COLUMN" placeholder — see _first_lender_col).
         sheet_lenders = {}
-        for c in range(3, ws.max_column + 1):
+        start_col = _first_lender_col(ws)
+        for c in range(start_col, ws.max_column + 1):
             v = ws.cell(row=1, column=c).value
             if v and str(v).strip():
                 raw = str(v).strip()
                 canonical = normalize_lender(raw)
                 if canonical in lender_ids:
                     sheet_lenders[c] = (canonical, lender_ids[canonical])
+
+        if start_col == 2:
+            log(db, import_id, "WARN",
+                f"{sheet_name}: no 'VOTE COLUMN' placeholder detected, lenders read from column B instead of C",
+                sheet_name, 1)
 
         if not sheet_lenders:
             log(db, import_id, "WARN", f"No lenders found in {sheet_name}")
@@ -613,8 +643,9 @@ def _insert_product_sheet_data(db, import_id, wb):
             continue
 
         # Process each attribute row
+        label_col = _attr_label_col(ws)
         for r in range(2, ws.max_row + 1):
-            attr_cell = ws.cell(row=r, column=2)
+            attr_cell = ws.cell(row=r, column=label_col)
             if attr_cell.value is None:
                 continue
             raw_attr = str(attr_cell.value).strip()

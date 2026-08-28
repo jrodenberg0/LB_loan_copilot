@@ -5,15 +5,15 @@ Uses structured corpus + LLM-as-judge parsed data for state coverage
 and FICO/LTV condition matching. Every output cites sources.
 """
 
-import json, re, sys, sqlite3
+import json, re, sys
 from pathlib import Path
 from collections import defaultdict
 from difflib import SequenceMatcher
 
 from llm_parse import parse_state_coverage, parse_fico_ltv_tiers, state_includes, fico_matches
+import store
 
 CORPUS_DIR = Path(__file__).parent / "corpus"
-DB_PATH = CORPUS_DIR / "corpus.db"
 
 
 def _extract_experience_min(raw: str):
@@ -58,129 +58,12 @@ def _extract_experience_min(raw: str):
     return None
 
 
-def _db():
-    if not hasattr(_db, 'conn') or _db.conn is None:
-        if not DB_PATH.exists():
-            raise RuntimeError(f"Corpus DB not found at {DB_PATH}. Run `python3 migrate.py` first.")
-        conn = sqlite3.connect(str(DB_PATH))
-        conn.row_factory = sqlite3.Row
-        conn.execute("PRAGMA foreign_keys=ON")
-        _db.conn = conn
-    return _db.conn
-
-
-def load_all_from_db():
-    """Load all corpus data from typed SQLite schema into dict (backward compat for engine + evals)."""
-    db = _db()
-
-    # Records: product sheet attr values
-    records = []
-    for row in db.execute("""
-        SELECT
-            l.canonical_name AS lender,
-            l.canonical_name AS lender_canonical,
-            p.name AS product,
-            a.name AS attr_name,
-            COALESCE(lav.value_numeric, lav.value_text, '') AS attr_value,
-            lav.raw_text AS raw_text,
-            lav.source_sheet,
-            lav.source_row,
-            'text' AS confidence,
-            'no' AS sensitive
-        FROM lender_attr_values lav
-        JOIN lenders l ON l.id = lav.lender_id
-        JOIN products p ON p.id = lav.product_id
-        JOIN attribute_definitions a ON a.id = lav.attr_id
-        WHERE lav.import_id = (SELECT MAX(id) FROM imports)
-    """).fetchall():
-        records.append(dict(row))
-
-    # Scenarios: from CS-DSCR/FNF Implication sheets
-    scenarios_map = {}
-    for row in db.execute("""
-        SELECT scenario_id, condition, product_type, recommendation_lender, recommendation_detail, source_sheet, source_row
-        FROM scenarios
-        WHERE import_id = (SELECT MAX(id) FROM imports)
-        ORDER BY source_row
-    """).fetchall():
-        s = dict(row)
-        sid = s["scenario_id"]
-        if sid not in scenarios_map:
-            scenarios_map[sid] = {
-                "scenario_id": sid,
-                "condition": s["condition"],
-                "product_type": s["product_type"],
-                "recommendations": [],
-                "source_sheet": s["source_sheet"],
-                "source_row": s["source_row"],
-            }
-        scenarios_map[sid]["recommendations"].append({
-            "lender_canonical": str(s["recommendation_lender"] or ""),
-            "detail": str(s["recommendation_detail"] or ""),
-        })
-    scenarios = list(scenarios_map.values())
-
-    # Credit grids
-    credit_grids = []
-    for row in db.execute("""
-        SELECT cg.*, l.canonical_name AS lender_canonical
-        FROM credit_grids cg
-        JOIN lenders l ON l.id = cg.lender_id
-        WHERE cg.import_id = (SELECT MAX(id) FROM imports)
-    """).fetchall():
-        g = dict(row)
-        # Build grid dict for backward compat
-        grid = {}
-        if g.get("min_fico") is not None:
-            # Simple grid: just one bucket
-            grid[str(int(g["min_fico"]))] = g.get("ltv_purchase") or ""
-        g["grid"] = grid
-        g["lender_canonical"] = g.get("lender_canonical", "")
-        g["source_sheet"] = g.get("source_sheet", "CS-CREDIT")
-        credit_grids.append(g)
-
-    # Experience matrices → underwriting (backward compat)
-    underwriting = []
-    for row in db.execute("""
-        SELECT em.*, l.canonical_name AS lender_canonical
-        FROM experience_matrices em
-        JOIN lenders l ON l.id = em.lender_id
-        WHERE em.import_id = (SELECT MAX(id) FROM imports)
-    """).fetchall():
-        u = dict(row)
-        underwriting.append({
-            "lender": u.get("lender_canonical", ""),
-            "lender_canonical": u.get("lender_canonical", ""),
-            "source_sheet": u.get("source_sheet", "CS-EXPERIENCE"),
-            "type": "experience_matrix",
-            "data": json.dumps({"exp_level": u.get("exp_level"), "ltc_terms": u.get("ltc_terms")}),
-        })
-
-    meta = {}
-    for row in db.execute("SELECT key, value FROM meta").fetchall():
-        meta[row["key"]] = row["value"]
-
-    # Build a minimal lender index
-    lenders = {}
-    for row in db.execute("SELECT canonical_name FROM lenders").fetchall():
-        lenders[row["canonical_name"]] = {"canonical": row["canonical_name"]}
-
-    return {
-        "meta": meta,
-        "records": records,
-        "scenarios": scenarios,
-        "credit_grids": credit_grids,
-        "underwriting": underwriting,
-        "_lenders": lenders,
-    }
-
-
 class CreditBoxEngine:
     def __init__(self, data=None):
         if data is not None:
             self.data = data
         else:
-            self.data = load_all_from_db()
+            self.data = store.load_all()
         self._build_index()
 
     def _build_index(self):
@@ -261,12 +144,15 @@ class CreditBoxEngine:
                 if attr_name == "state_coverage":
                     raw = str(recs[0]["attr_value"]).strip()
                     self.parsed_states[(lc, prod)] = parse_state_coverage(raw)
-                elif attr_name in ("fico_at_max_ltv", "fico_qualification", "dscr_range",
-                                    "ltv_purchase_max", "ltv_cashout_max"):
+                elif attr_name in ("fico_requirement_at_max_ltv", "fico_qualification", "dscr__prop_dti_min_max",
+                                    "max__ltv_purchase", "max__ltv_cash_out_refi"):
                     raw = str(recs[0]["attr_value"]).strip()
                     self.parsed_fico_tiers[(lc, prod, attr_name)] = parse_fico_ltv_tiers(raw, attr_name)
 
         # Experience index
+        # Note: substring match here is already tolerant of the
+        # experience_minimum_(see_experience_cheat_sheet) vs
+        # experience_minimum_see_experience_cheat_sheet naming difference.
         self.exp_index = {}
         for key, attr_map in self.attr_index.items():
             lc, prod = key
@@ -587,7 +473,7 @@ class CreditBoxEngine:
         # If no scenario matched, fall back to attribute-based
         if not candidate_lenders and product:
             candidate_lenders = self.attr_to_lenders.get("fico_min", set()) | \
-                                self.attr_to_lenders.get("ltv_purchase_max", set())
+                                self.attr_to_lenders.get("max__ltv_purchase", set())
         elif not candidate_lenders:
             # All lenders
             candidate_lenders = self.lenders.copy()
@@ -644,8 +530,8 @@ class CreditBoxEngine:
             if "fico" in criteria:
                 fico_val = criteria["fico"]
                 tier_parsed = None
-                # Try fico_at_max_ltv → fico_qualification → ltv_purchase_max → ltv_cashout_max
-                for attr in ("fico_at_max_ltv", "fico_qualification", "ltv_purchase_max", "ltv_cashout_max"):
+                # Try fico_requirement_at_max_ltv → fico_qualification → max__ltv_purchase → max__ltv_cash_out_refi
+                for attr in ("fico_requirement_at_max_ltv", "fico_qualification", "max__ltv_purchase", "max__ltv_cash_out_refi"):
                     tier_parsed = self.parsed_fico_tiers.get((lender, product or "", attr))
                     if tier_parsed:
                         # Check if it has actual FICO tiers
@@ -781,23 +667,23 @@ class CreditBoxEngine:
                     return m
 
                 # loan_min check
-                min_recs = self.get_lender_attr(lender, product or "fix_and_flip", "loan_min")
+                min_recs = self.get_lender_attr(lender, product or "fix_and_flip", "min_loan_amount")
                 if min_recs:
                     min_val = _get_max_numeric(min_recs)
                     if min_val is not None and min_val <= la:
                         score += 0.2
                         reasons.append({
                             "type": "attribute",
-                            "detail": f"loan_min={min_val} ≤ ${la} loan",
+                            "detail": f"min_loan_amount={min_val} ≤ ${la} loan",
                             "source_sheet": min_recs[0]["source_sheet"],
                             "source_row": min_recs[0]["source_row"],
                         })
 
                 # loan_max check: penalize if known max < requested
-                max_recs = self.get_lender_attr(lender, product or "fix_and_flip", "loan_max")
+                max_recs = self.get_lender_attr(lender, product or "fix_and_flip", "max_loan_amount")
                 if not max_recs and product:
                     for p in self.lender_products.get(lender, []):
-                        max_recs = self.get_lender_attr(lender, p, "loan_max")
+                        max_recs = self.get_lender_attr(lender, p, "max_loan_amount")
                         if max_recs:
                             break
                 if max_recs:
@@ -807,7 +693,7 @@ class CreditBoxEngine:
                             score += 0.2
                             reasons.append({
                                 "type": "attribute",
-                                "detail": f"loan_max=${max_val:,.0f} ≥ ${la} loan",
+                                "detail": f"max_loan_amount=${max_val:,.0f} ≥ ${la} loan",
                                 "source_sheet": max_recs[0]["source_sheet"],
                                 "source_row": max_recs[0]["source_row"],
                             })
@@ -815,17 +701,17 @@ class CreditBoxEngine:
                             score -= 1.0
                             reasons.append({
                                 "type": "attribute",
-                                "detail": f"loan_max=${max_val:,.0f} < requested ${la} (insufficient capacity)",
+                                "detail": f"max_loan_amount=${max_val:,.0f} < requested ${la} (insufficient capacity)",
                             })
 
             # Check experience
             if "experience" in criteria:
                 exp = criteria["experience"]
                 exp_recs = self.get_lender_attr(lender, product or "fix_and_flip",
-                                                "experience_minimum_(see_experience_cheat_sheet)")
+                                                "experience_minimum_see_experience_cheat_sheet")
                 if not exp_recs:
                     exp_recs = self.get_lender_attr(lender, product or "fix_and_flip",
-                                                    "min_experience_for_max_ltc_arv")
+                                                    "min_experience_for_max_ltcarv")
                 if exp_recs:
                     attr_name = exp_recs[0]["attr_name"]
                     reasons.append({

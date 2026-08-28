@@ -166,7 +166,7 @@ Example output for `python3 query.py "680 FICO Chicago DSCR"`:
 | Symptom | Likely cause | Fix |
 |---------|-------------|-----|
 | "No lenders matched" | Product or criteria too narrow | Drop FICO by 20pts, widen city, try different product |
-| Staleness WARN/FAIL | Excel parsed >30 days ago | Re-run `python3 parser.py <excel>` |
+| Staleness WARN/FAIL | Excel parsed >30 days ago | Re-run `python3 migrate.py --excel <excel>` |
 | "State not found" | Misspelled state code | Use 2-letter code: "MD", "CA", "TX" |
 | Lender missing from results | filtered out by `!not` or loan_max penalty | Check `!history` for active exclusions |
 | Scenario not triggering | City not in city_map.json | Add entry or use metro city name directly |
@@ -174,11 +174,11 @@ Example output for `python3 query.py "680 FICO Chicago DSCR"`:
 ## Data Pipeline
 
 ```bash
-# Parse Excel → JSON corpus
-python3 parser.py ~/Downloads/Copy\ of\ THE\ Master\ Credit\ Box-IPLE\ 2026\ \(1\).xlsx
+# Parse Excel → SQLite corpus.db
+python3 migrate.py --excel ~/Downloads/Copy\ of\ THE\ Master\ Credit\ Box-IPLE\ 2026\ \(1\).xlsx
 
 # Rebuild LLM cache (after data updates)
-python3 generate_llm_cache.py
+python3 build_llm_cache.py
 
 # Run test suite
 python3 test_runner.py
@@ -191,12 +191,11 @@ python3 evals.py
 
 | Path | Purpose |
 |------|---------|
-| `corpus/corpus.json` | 10K+ EAV records (parsed from Excel) |
-| `corpus/lenders.json` | 145 lender index with aliases |
-| `corpus/scenarios.json` | 53 decision rules |
+| `corpus/corpus.db` | SQLite corpus: EAV records, lender index/aliases, scenarios |
 | `corpus/llm_cache.json` | 261 pre-computed structured entries |
 | `corpus/city_map.json` | Suburb → metro mapping for restriction inheritance |
-| `parser.py` | Excel → JSON corpus |
+| `migrate.py` | Excel → SQLite corpus.db |
+| `store.py` | Data-access layer (sole reader of corpus.db) |
 | `reason.py` | Deterministic engine — scoring, criteria parsing, scenario matching |
 | `llm_parse.py` | LLM-as-judge for state coverage, FICO/LTV tier parsing |
 | `agent_tools.py` | 9 agent tools wrapping engine |

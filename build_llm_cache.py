@@ -8,7 +8,8 @@ New unseen values at re-parse time -> flagged for manual review.
 import json
 from pathlib import Path
 
-CORPUS_PATH = Path(__file__).parent / "corpus" / "corpus.json"
+import store
+
 CACHE_PATH = Path(__file__).parent / "corpus" / "llm_cache.json"
 
 ALL_STATES = {
@@ -121,9 +122,9 @@ def parse_fico_tier(raw_text, attr_name):
     # Simple numeric
     try:
         val = float(raw.replace("+", "").replace("%", "").strip())
-        if attr_name == "fico_at_max_ltv":
+        if attr_name == "fico_requirement_at_max_ltv":
             return {"tiers": [{"min_fico": int(val)}], "notes": "", "raw": raw}
-        elif attr_name in ("ltv_purchase_max", "ltv_cashout_max"):
+        elif attr_name in ("max__ltv_purchase", "max__ltv_cash_out_refi"):
             return {"tiers": [{"max_ltv": val}], "notes": "", "raw": raw}
         return {"tiers": [{"value": val}], "notes": "", "raw": raw}
     except ValueError:
@@ -168,15 +169,15 @@ import re
 
 
 def build_cache():
-    corpus = json.loads(CORPUS_PATH.read_text())
-    records = corpus["records"]
+    data = store.load_all()
+    records = data["records"]
     cache = {}
 
     # Collect unique values
     state_vals = {}
     fico_tier_vals = {}
-    tier_attrs = {"fico_at_max_ltv", "fico_qualification", "dscr_range",
-                   "ltv_purchase_max", "ltv_cashout_max"}
+    tier_attrs = {"fico_requirement_at_max_ltv", "fico_qualification", "dscr__prop_dti_min_max",
+                   "max__ltv_purchase", "max__ltv_cash_out_refi"}
 
     for r in records:
         v = str(r["attr_value"]).strip()

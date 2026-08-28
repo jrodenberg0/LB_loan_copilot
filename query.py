@@ -28,19 +28,11 @@ from state import push_query, refine_query, list_history, load_state, clear_stat
 CORPUS_DIR = Path(__file__).parent / "corpus"
 
 
-def load_corpus():
-    with open(CORPUS_DIR / "corpus.json") as f:
-        return json.load(f)
-
-
-def load_lenders():
-    with open(CORPUS_DIR / "lenders.json") as f:
-        return json.load(f)
+import store
 
 
 def load_scenarios():
-    with open(CORPUS_DIR / "scenarios.json") as f:
-        return json.load(f)
+    return {"scenarios": store.get_scenarios()}
 
 
 def fmt_source(ss, sr):
@@ -117,9 +109,9 @@ def cmd_query(args):
     # Full scenario details
     if sm:
         print(f"  Scenario details:\n")
-        data = load_corpus()
+        scenarios = store.get_scenarios()
         for si_name in sm:
-            for s in data["scenarios"]:
+            for s in scenarios:
                 if s["condition"] == si_name:
                     print(f"  [{s['source_sheet']}] {s['condition']}")
                     for rec in s["recommendations"][:5]:
@@ -159,41 +151,31 @@ def cmd_list_scenarios():
 
 
 def cmd_freshness():
-    data = load_corpus()
-    meta = data.get("meta", {})
-    age = meta.get("file_age_days", 0)
-    generated = meta.get("generated", "?")
-    mtime = meta.get("file_mtime", "?")
-    source = meta.get("source", "?")
-    size = meta.get("file_size_bytes", 0)
-    n_records = len(data.get("records", []))
-    n_scenarios = len(data.get("scenarios", []))
-    lenders_idx = json.loads((CORPUS_DIR / "lenders.json").read_text())
-    n_lenders = len(lenders_idx)
+    fresh = store.get_freshness()
 
     print(f"\n{'='*60}")
     print(f"  Data Freshness Report")
     print(f"{'='*60}")
-    print(f"  Source: {source}")
-    print(f"  File size: {size:,} bytes")
-    print(f"  File last modified: {mtime[:16] if mtime else '?'}")
-    print(f"  Parsed: {generated[:16] if generated else '?'}")
-    print(f"  Age: {int(age)} days {'✓' if age < 30 else '⚠' if age < 90 else '✗'}")
-    print(f"  Records: {n_records}")
-    print(f"  Lenders: {n_lenders}")
-    print(f"  Scenarios: {n_scenarios}")
+    print(f"  Source: {fresh['file_path']}")
+    print(f"  File last modified: {(fresh['file_mtime'] or '?')[:16]}")
+    print(f"  Imported: {(fresh['imported_at'] or '?')[:16]}")
+    age = fresh['age_days'] or 0
+    print(f"  Age: {age:.1f} days {'✓' if age < 30 else '⚠' if age < 90 else '✗'}")
+    print(f"  Records: {fresh['n_records']}")
+    print(f"  Lenders: {fresh['n_lenders']}")
+    print(f"  Scenarios: {fresh['n_scenarios']}")
     print(f"  Status: ", end="")
-    if age < 30:
+    if fresh['fresh']:
         print("Fresh")
-    elif age < 90:
-        print(f"Stale — re-parser recommended ({int(age)} days old)")
+    elif fresh['stale'] and not fresh['critically_stale']:
+        print(f"Stale — re-parse recommended ({age:.1f} days old)")
     else:
-        print(f"CRITICALLY stale — re-parse needed ({int(age)} days old)")
+        print(f"CRITICALLY stale — re-parse needed ({age:.1f} days old)")
     print()
 
 
 def cmd_list_lenders():
-    lenders = load_lenders()
+    lenders = store.get_lenders_index()
     print("Lenders:\n")
     for name, info in sorted(lenders.items()):
         aliases = f" (aka {', '.join(info['aliases'])})" if info["aliases"] else ""
@@ -216,16 +198,15 @@ def cmd_show_tiers(args):
 
     name = " ".join(args)
     cache = json.loads((CORPUS_DIR / "llm_cache.json").read_text())
-    data = load_corpus()
 
-    tier_attrs = ["fico_at_max_ltv", "fico_qualification", "dscr_range",
-                   "ltv_purchase_max", "ltv_cashout_max"]
+    tier_attrs = ["fico_requirement_at_max_ltv", "fico_qualification", "dscr__prop_dti_min_max",
+                   "max__ltv_purchase", "max__ltv_cash_out_refi"]
 
     print(f"\n{'='*60}")
     print(f"  FICO/LTV Tiers: {name}" + (f" [{product}]" if product else ""))
     print(f"{'='*60}")
 
-    records = [r for r in data["records"] if r["lender_canonical"].lower() == name.lower()]
+    records = store.get_lender_records(name)
     attrs_found = defaultdict(list)
     for r in records:
         if r["attr_name"] in tier_attrs and (not product or r["product"] == product or not product):
@@ -276,8 +257,7 @@ def cmd_show_lender(args):
         print("Usage: --show-lender <name>")
         return
     name = " ".join(args)
-    data = load_corpus()
-    records = [r for r in data["records"] if r["lender_canonical"].lower() == name.lower()]
+    records = store.get_lender_records(name)
 
     if not records:
         print(f"No data for '{name}'. Try --list-lenders")
@@ -310,10 +290,8 @@ def cmd_compare(args):
         args = args[:idx] + args[idx + 2:]
 
     l1, l2 = args[0], args[1]
-    data = load_corpus()
-
-    r1 = [r for r in data["records"] if r["lender_canonical"].lower() == l1.lower() and (not product or r["product"] == product)]
-    r2 = [r for r in data["records"] if r["lender_canonical"].lower() == l2.lower() and (not product or r["product"] == product)]
+    r1 = store.get_lender_records(l1, product)
+    r2 = store.get_lender_records(l2, product)
 
     if not r1 and not r2:
         print("No data found for either lender.")

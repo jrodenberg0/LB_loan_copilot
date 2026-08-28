@@ -16,7 +16,7 @@ SCORING_ATTRS = {
 
     # FICO / credit
     "fico_min": "number",
-    "fico_at_max_ltv": "number",
+    "fico_requirement_at_max_ltv": "number",
     "fico_qualification": "text",
     "max_lates": "number",
     "bk_fc_wait_years": "number",
@@ -26,8 +26,8 @@ SCORING_ATTRS = {
     "uses_loanbidz": "boolean",
 
     # LTV / loan structure
-    "ltv_purchase_max": "percent",
-    "ltv_cashout_max": "percent",
+    "max__ltv_purchase": "percent",
+    "max__ltv_cash_out_refi": "percent",
     "ltv_rateterm_max": "percent",
     "ltv_at_max_fico": "percent",
     "ltv_at_min_fico": "percent",
@@ -46,14 +46,14 @@ SCORING_ATTRS = {
     "max_seller_concession": "percent",
 
     # DSCR / debt
-    "dscr_range": "number",
+    "dscr__prop_dti_min_max": "number",
     "dscr_min": "number",
     "dscr_max": "number",
 
     # Experience
     "experience_minimum": "number",
-    "experience_minimum_(see_experience_cheat_sheet)": "text",
-    "min_experience_for_max_ltc_arv": "number",
+    "experience_minimum_see_experience_cheat_sheet": "text",
+    "min_experience_for_max_ltcarv": "number",
     "experience_lookback_period": "text",
 
     # Rates
@@ -82,8 +82,8 @@ SCORING_ATTRS = {
     "days_to_close": "number",
 
     # Loan amounts
-    "loan_min": "dollar",
-    "loan_max": "dollar",
+    "min_loan_amount": "dollar",
+    "max_loan_amount": "dollar",
     "property_value_min": "dollar",
     "loan_amount": "dollar",
     "max_guarantor_exposure": "dollar",
