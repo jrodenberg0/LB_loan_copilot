@@ -6,6 +6,7 @@ Every other module (reason.py, agent_tools.py, query.py, evals.py,
 build_llm_cache.py) reads through the functions here.
 """
 
+import datetime
 import json, sqlite3
 from pathlib import Path
 from collections import defaultdict
@@ -130,4 +131,73 @@ def load_all():
         "credit_grids": credit_grids,
         "underwriting": underwriting,
         "_lenders": lenders,
+    }
+
+
+def get_lender_records(lender, product=None):
+    """All EAV records for a lender, optionally filtered by product."""
+    data = load_all()
+    return [
+        r for r in data["records"]
+        if r["lender_canonical"].lower() == lender.lower()
+        and (product is None or r["product"] == product)
+    ]
+
+
+def get_lenders_index():
+    """Replacement for corpus/lenders.json: {canonical_name: {aliases, products}}."""
+    db = _db()
+    index = {}
+    for row in db.execute("SELECT id, canonical_name FROM lenders").fetchall():
+        lender_id, canonical = row["id"], row["canonical_name"]
+        aliases = [
+            r["alias"] for r in
+            db.execute("SELECT alias FROM lender_aliases WHERE lender_id = ?", (lender_id,)).fetchall()
+        ]
+        products = [
+            r["name"] for r in db.execute("""
+                SELECT p.name FROM product_offerings po
+                JOIN products p ON p.id = po.product_id
+                WHERE po.lender_id = ?
+            """, (lender_id,)).fetchall()
+        ]
+        index[canonical] = {"aliases": aliases, "products": products}
+    return index
+
+
+def get_scenarios():
+    """Replacement for corpus/scenarios.json."""
+    return load_all()["scenarios"]
+
+
+def get_freshness():
+    """Data freshness report, derived from the imports table (not a synthetic meta blob)."""
+    db = _db()
+    row = db.execute("""
+        SELECT file_path, file_mtime, imported_at
+        FROM imports
+        ORDER BY id DESC LIMIT 1
+    """).fetchone()
+
+    data = load_all()
+    n_records = len(data["records"])
+    n_lenders = len(data["_lenders"])
+    n_scenarios = len(data["scenarios"])
+
+    age_days = None
+    if row and row["imported_at"]:
+        imported_at = datetime.datetime.fromisoformat(row["imported_at"].replace(" ", "T"))
+        age_days = (datetime.datetime.now() - imported_at).total_seconds() / 86400
+
+    return {
+        "file_path": row["file_path"] if row else None,
+        "file_mtime": row["file_mtime"] if row else None,
+        "imported_at": row["imported_at"] if row else None,
+        "age_days": age_days,
+        "n_records": n_records,
+        "n_lenders": n_lenders,
+        "n_scenarios": n_scenarios,
+        "fresh": age_days is not None and age_days < 30,
+        "stale": age_days is not None and age_days >= 30,
+        "critically_stale": age_days is not None and age_days >= 90,
     }
