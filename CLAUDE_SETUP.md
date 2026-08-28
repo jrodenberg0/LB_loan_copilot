@@ -21,8 +21,9 @@ Copy the entire `credit-box-rag/` folder to the new user's machine. Everything t
 
 ```
 credit-box-rag/
-├── corpus/              ← pre-built data (corpus.json, llm_cache.json, etc.)
-├── parser.py            ← Excel → corpus (only needed if data updates)
+├── corpus/              ← pre-built data (corpus.db, llm_cache.json, etc.)
+├── migrate.py           ← Excel → corpus.db (only needed if data updates)
+├── store.py             ← data-access layer
 ├── reason.py            ← scoring engine
 ├── query.py             ← CLI interface
 ├── agent_tools.py       ← 9 Python tools for Claude
@@ -38,7 +39,7 @@ credit-box-rag/
 └── AVAILABLE_GAPS.md    ← known gaps
 ```
 
-**Do NOT include**: `corpus.db`, `__pycache__/`, `.pytest_cache/`
+**Do NOT include**: `__pycache__/`, `.pytest_cache/`
 
 ---
 
@@ -57,12 +58,11 @@ That's it. Only 3 third-party packages. Everything else is stdlib.
 ```bash
 cd ~/Desktop/credit-box-rag
 python3 -c "
-import json
-with open('corpus/corpus.json') as f:
-    data = json.load(f)
-print(f'Corpus: {len(data)} records')
-print(f'Lenders: {len(data[\"lenders\"])}')
-print(f'Scenarios: {len(data[\"scenarios\"])}')
+from store import load_all, get_lenders_index, get_scenarios
+data = load_all()
+print(f'Corpus: {len(data[\"records\"])} records')
+print(f'Lenders: {len(get_lenders_index())}')
+print(f'Scenarios: {len(get_scenarios())}')
 "
 ```
 
@@ -73,7 +73,7 @@ Lenders: ~145
 Scenarios: 53
 ```
 
-If this fails, re-parse from Excel (see Step 5).
+If this fails, re-migrate from Excel (see Step 5).
 
 ---
 
@@ -169,8 +169,8 @@ agent.get_freshness()
 When new Excel arrives:
 
 ```bash
-python3 parser.py ~/Downloads/NewCreditBox.xlsx
-python3 generate_llm_cache.py
+python3 migrate.py --excel ~/Downloads/NewCreditBox.xlsx
+python3 build_llm_cache.py
 ```
 
 Verify:
@@ -182,11 +182,10 @@ python3 test_runner.py
 
 | File | Purpose |
 |------|---------|
-| `corpus/corpus.json` | All EAV records |
-| `corpus/lenders.json` | Lender index + aliases |
-| `corpus/scenarios.json` | 53 decision rules |
+| `corpus/corpus.db` | SQLite corpus: EAV records, lenders, scenarios |
 | `corpus/llm_cache.json` | 241 pre-computed entries |
 | `corpus/city_map.json` | Suburb → metro mapping |
+| `store.py` | Data-access layer (sole reader of corpus.db) |
 | `reason.py` | Scoring engine |
 | `agent_tools.py` | 9 agent tools |
 | `query.py` | CLI with conversation state |
@@ -200,8 +199,8 @@ python3 test_runner.py
 If the Excel file has been updated:
 
 ```bash
-python3 parser.py ~/Downloads/NewCreditBox.xlsx
-python3 generate_llm_cache.py
+python3 migrate.py --excel ~/Downloads/NewCreditBox.xlsx
+python3 build_llm_cache.py
 python3 test_runner.py  # verify nothing broke
 ```
 
@@ -279,7 +278,7 @@ for deal in deals:
 | `ModuleNotFoundError: No module named 'openpyxl'` | `pip install openpyxl` |
 | "No lenders matched" | Widen criteria: lower FICO, drop city, try different product |
 | Staleness warning | Re-parse from Excel |
-| `corpus.json` missing | Re-run `python3 parser.py <excel>` |
+| `corpus.db` missing | Re-run `python3 migrate.py --excel <excel>` |
 | Engine crashes on load | Check Python 3.10+, reinstall deps |
 | "State not found" | Use 2-letter code: "MD", "CA", "TX" |
 
@@ -288,7 +287,7 @@ for deal in deals:
 ## Security Notes
 
 - **Credentials in data**: The Excel contains plaintext lender portal logins. These are extracted but flagged `sensitive: true` in the corpus. Never surface them in responses.
-- **corpus.json is NOT encrypted**. Treat it as internal-only. Do not share outside the org.
+- **corpus.db is NOT encrypted**. Treat it as internal-only. Do not share outside the org.
 - The `!not` exclusion list persists in `~/.credit-box/state.json`. Clear between users with `!clear`.
 
 ---
