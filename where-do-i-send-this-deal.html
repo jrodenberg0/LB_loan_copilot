@@ -1,0 +1,470 @@
+<title>Where Do I Send This Deal?</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=Public+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+  :root {
+    --paper: #eeece5;
+    --surface: #f8f7f3;
+    --ink: #1c2027;
+    --ink-soft: #565f6d;
+    --ink-faint: #8a8f96;
+    --line: #d9d5ca;
+    --accent: #9a2e2e;
+    --accent-ink: #6f1f1f;
+    --accent-soft: #f2e2df;
+    --today: #b5540f;
+    --today-soft: #f4e6d6;
+    --tomorrow: #2f5d50;
+    --tomorrow-soft: #dfe9e3;
+    --focus: #2f6fed;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --paper: #14171c;
+      --surface: #1b1f26;
+      --ink: #e9e7e0;
+      --ink-soft: #a5abb6;
+      --ink-faint: #6d7480;
+      --line: #2c313a;
+      --accent: #d16a5f;
+      --accent-ink: #e8887d;
+      --accent-soft: #2e2220;
+      --today: #d99a4e;
+      --today-soft: #2c2418;
+      --tomorrow: #6fae98;
+      --tomorrow-soft: #1c2723;
+      --focus: #6ea2ff;
+    }
+  }
+
+  :root[data-theme="dark"] {
+    --paper: #14171c;
+    --surface: #1b1f26;
+    --ink: #e9e7e0;
+    --ink-soft: #a5abb6;
+    --ink-faint: #6d7480;
+    --line: #2c313a;
+    --accent: #d16a5f;
+    --accent-ink: #e8887d;
+    --accent-soft: #2e2220;
+    --today: #d99a4e;
+    --today-soft: #2c2418;
+    --tomorrow: #6fae98;
+    --tomorrow-soft: #1c2723;
+    --focus: #6ea2ff;
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    background: var(--paper);
+    color: var(--ink);
+    font-family: "Public Sans", -apple-system, BlinkMacSystemFont, sans-serif;
+    font-size: 16px;
+    line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  ::selection { background: var(--accent-soft); color: var(--accent-ink); }
+
+  a { color: var(--accent-ink); }
+  a:focus-visible, button:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+
+  .page {
+    max-width: 46rem;
+    margin: 0 auto;
+    padding: 4.5rem 1.5rem 6rem;
+  }
+
+  header.hero {
+    margin-bottom: 3.25rem;
+  }
+
+  .eyebrow {
+    font-family: "IBM Plex Mono", monospace;
+    font-size: 0.72rem;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--ink-faint);
+    margin: 0 0 0.9rem;
+  }
+
+  h1 {
+    font-family: "Fraunces", Georgia, serif;
+    font-weight: 500;
+    font-size: clamp(2.1rem, 5vw, 3rem);
+    line-height: 1.08;
+    letter-spacing: -0.01em;
+    margin: 0 0 1rem;
+    text-wrap: balance;
+    color: var(--ink);
+  }
+
+  .dek {
+    font-size: 1.08rem;
+    color: var(--ink-soft);
+    max-width: 40rem;
+    margin: 0;
+    text-wrap: pretty;
+  }
+
+  .lede-block {
+    margin-top: 1.75rem;
+    padding: 1.1rem 1.3rem;
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-left: 3px solid var(--accent);
+    border-radius: 3px;
+    font-size: 0.96rem;
+    color: var(--ink-soft);
+  }
+
+  .lede-block strong { color: var(--ink); font-weight: 600; }
+
+  /* the core question strip */
+  .question-strip {
+    margin: 2.75rem 0 3.5rem;
+    padding: 1.6rem 1.7rem;
+    background: var(--ink);
+    color: var(--paper);
+    border-radius: 4px;
+  }
+  :root[data-theme="dark"] .question-strip,
+  @media (prefers-color-scheme: dark) { }
+
+  .question-strip .q-label {
+    font-family: "IBM Plex Mono", monospace;
+    font-size: 0.68rem;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    opacity: 0.55;
+    margin: 0 0 0.6rem;
+  }
+
+  .question-strip .q-text {
+    font-family: "Fraunces", Georgia, serif;
+    font-size: 1.28rem;
+    font-weight: 400;
+    line-height: 1.35;
+    margin: 0;
+    text-wrap: balance;
+  }
+
+  .question-strip .q-text .num {
+    font-family: "IBM Plex Mono", monospace;
+    font-weight: 500;
+  }
+
+  /* section divider */
+  .divider {
+    display: flex;
+    align-items: center;
+    gap: 0.9rem;
+    margin: 3.75rem 0 2rem;
+  }
+  .divider .count {
+    font-family: "IBM Plex Mono", monospace;
+    font-size: 0.78rem;
+    color: var(--ink-faint);
+    white-space: nowrap;
+  }
+  .divider .rule { flex: 1; height: 1px; background: var(--line); }
+
+  section.persona {
+    padding-bottom: 3rem;
+    border-bottom: 1px solid var(--line);
+    margin-bottom: 3rem;
+  }
+  section.persona:last-of-type { border-bottom: none; margin-bottom: 0; }
+
+  .persona-head {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 1rem;
+    flex-wrap: wrap;
+    margin-bottom: 0.35rem;
+  }
+
+  .persona-name {
+    font-family: "Fraunces", Georgia, serif;
+    font-size: 1.55rem;
+    font-weight: 500;
+    margin: 0;
+  }
+
+  .persona-role {
+    font-family: "IBM Plex Mono", monospace;
+    font-size: 0.72rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--ink-faint);
+  }
+
+  .persona-quote {
+    font-size: 1.02rem;
+    color: var(--ink-soft);
+    font-style: italic;
+    margin: 0 0 1.5rem;
+    max-width: 38rem;
+  }
+  .persona-quote::before { content: "“"; font-style: normal; color: var(--accent); }
+  .persona-quote::after { content: "”"; font-style: normal; color: var(--accent); }
+
+  .compare {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1.1rem;
+    margin-bottom: 1.5rem;
+  }
+  @media (max-width: 640px) {
+    .compare { grid-template-columns: 1fr; }
+  }
+
+  .compare-col {
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 4px;
+    padding: 1.1rem 1.15rem;
+  }
+
+  .compare-col .tag {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    font-family: "IBM Plex Mono", monospace;
+    font-size: 0.68rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    margin-bottom: 0.6rem;
+  }
+  .compare-col.today .tag { color: var(--today); }
+  .compare-col.tomorrow .tag { color: var(--tomorrow); }
+  .compare-col .tag .dot {
+    width: 6px; height: 6px; border-radius: 50%;
+    background: currentColor;
+  }
+
+  .compare-col p {
+    margin: 0;
+    font-size: 0.94rem;
+    color: var(--ink-soft);
+  }
+  .compare-col p + p { margin-top: 0.55rem; }
+
+  .touchpoints {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    margin-top: 0.25rem;
+  }
+
+  .touchpoint {
+    font-family: "IBM Plex Mono", monospace;
+    font-size: 0.74rem;
+    color: var(--ink-soft);
+    background: var(--surface);
+    border: 1px solid var(--line);
+    padding: 0.3rem 0.6rem;
+    border-radius: 3px;
+    white-space: nowrap;
+  }
+
+  /* closing */
+  .closing {
+    margin-top: 4rem;
+    padding-top: 2.5rem;
+    border-top: 2px solid var(--ink);
+  }
+
+  .closing h2 {
+    font-family: "Fraunces", Georgia, serif;
+    font-weight: 500;
+    font-size: 1.5rem;
+    margin: 0 0 1.4rem;
+  }
+
+  .stakes {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1rem;
+  }
+  @media (max-width: 640px) {
+    .stakes { grid-template-columns: 1fr; }
+  }
+
+  .stake {
+    padding: 1rem 1.1rem;
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 4px;
+  }
+  .stake .n {
+    font-family: "IBM Plex Mono", monospace;
+    color: var(--accent-ink);
+    font-size: 0.78rem;
+    margin-bottom: 0.4rem;
+  }
+  .stake p { margin: 0; font-size: 0.9rem; color: var(--ink-soft); }
+  .stake strong { color: var(--ink); font-weight: 600; }
+
+  footer.source {
+    margin-top: 3.5rem;
+    font-family: "IBM Plex Mono", monospace;
+    font-size: 0.72rem;
+    color: var(--ink-faint);
+  }
+
+  @media (prefers-reduced-motion: no-preference) {
+    section.persona { animation: rise 0.5s ease both; }
+    section.persona:nth-of-type(1) { animation-delay: 0.02s; }
+    section.persona:nth-of-type(2) { animation-delay: 0.06s; }
+    section.persona:nth-of-type(3) { animation-delay: 0.1s; }
+    section.persona:nth-of-type(4) { animation-delay: 0.14s; }
+    @keyframes rise {
+      from { opacity: 0; transform: translateY(6px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+  }
+</style>
+
+<div class="page">
+
+  <header class="hero">
+    <p class="eyebrow">Credit Box RAG · IP Loan Exchange</p>
+    <h1>Where do I send this deal?</h1>
+    <p class="dek">The Master Credit Box already answers this &mdash; it's just buried across 16 spreadsheets, 78 lender names, and one analyst's memory. Four people touch it every week. Here's what changes for each of them.</p>
+    <div class="lede-block">
+      <strong>Today:</strong> one 23,000-cell workbook is the entire lending playbook &mdash; routing rules, rate grids, underwriting quirks, even portal passwords, all in merged cells and freeform text. <strong>The system being built</strong> turns that workbook into a queryable ontology: lenders, products, and scenarios as linked records, reasoned over instead of searched.
+    </div>
+  </header>
+
+  <div class="question-strip">
+    <p class="q-label">The question that started this</p>
+    <p class="q-text"><span class="num">640</span> FICO, <span class="num">$90k</span> property in Baltimore, <span class="num">1</span> prior flip &mdash; where do I send this?</p>
+  </div>
+
+  <div class="divider">
+    <span class="count">01 / 04</span>
+    <div class="rule"></div>
+  </div>
+
+  <section class="persona">
+    <div class="persona-head">
+      <h2 class="persona-name">The Broker</h2>
+      <span class="persona-role">Originator · asks the question</span>
+    </div>
+    <p class="persona-quote">I have a borrower on the phone right now and four spreadsheet tabs open.</p>
+    <div class="compare">
+      <div class="compare-col today">
+        <span class="tag"><span class="dot"></span>Today</span>
+        <p>Opens the Master Credit Box, Ctrl-F's across sheets that don't share attribute names &mdash; <em>FICO Min</em> here, <em>Minimum FICO</em> there. When the sheet doesn't resolve it, calls Quinton.</p>
+        <p>Gets an answer, but no rationale attached &mdash; and no way to tell if it's this week's rates or last quarter's.</p>
+      </div>
+      <div class="compare-col tomorrow">
+        <span class="tag"><span class="dot"></span>Tomorrow</span>
+        <p>Asks the question as written above. Gets ranked lenders with the specific rule that qualified each one &mdash; <em>Baltimore &rarr; Constructive, CV3, Conventus, Gradient</em> &mdash; sourced back to the decision matrix row.</p>
+        <p>Credentials never appear in the answer, even though they live in the same source rows.</p>
+      </div>
+    </div>
+    <div class="touchpoints">
+      <span class="touchpoint">CS-DSCR Implication</span>
+      <span class="touchpoint">CS-FNF Implication</span>
+      <span class="touchpoint">confidence: typed</span>
+      <span class="touchpoint">scenario notes</span>
+    </div>
+  </section>
+
+  <section class="persona">
+    <div class="persona-head">
+      <h2 class="persona-name">The Analyst</h2>
+      <span class="persona-role">Quinton · maintains the box</span>
+    </div>
+    <p class="persona-quote">Every rate change goes through me, by hand, in a workbook with my name nowhere on it.</p>
+    <div class="compare">
+      <div class="compare-col today">
+        <span class="tag"><span class="dot"></span>Today</span>
+        <p>A lender emails a new rate sheet. Quinton finds the right cell across merged headers and freeform narrative, edits it directly, and hopes nothing downstream depended on the old value.</p>
+        <p>No diff, no audit trail, no one else can safely make the change.</p>
+      </div>
+      <div class="compare-col tomorrow">
+        <span class="tag"><span class="dot"></span>Tomorrow</span>
+        <p>Fills a templated YAML: lender, product, attribute, old value, new value, source doc. Runs the ingest step, reviews the proposed diff, confirms.</p>
+        <p>The corpus, vault, and index update together &mdash; timestamped, attributed, reversible.</p>
+      </div>
+    </div>
+    <div class="touchpoints">
+      <span class="touchpoint">update.yaml</span>
+      <span class="touchpoint">diff engine</span>
+      <span class="touchpoint">Changelog.md</span>
+      <span class="touchpoint">confidence: manual</span>
+    </div>
+  </section>
+
+  <section class="persona">
+    <div class="persona-head">
+      <h2 class="persona-name">The New Loan Officer</h2>
+      <span class="persona-role">Onboarding · learning 55 lenders</span>
+    </div>
+    <p class="persona-quote">Nobody wrote down why we stopped sending rural deals to two of these lenders &mdash; you just learn it eventually.</p>
+    <div class="compare">
+      <div class="compare-col today">
+        <span class="tag"><span class="dot"></span>Today</span>
+        <p>Shadows senior brokers, keeps a personal notes doc, re-asks the same questions until the answers stick. The workbook has no browsing path &mdash; you either know which tab to open or you don't.</p>
+      </div>
+      <div class="compare-col tomorrow">
+        <span class="tag"><span class="dot"></span>Tomorrow</span>
+        <p>Opens the Obsidian vault, clicks into a lender, and follows the links out &mdash; products offered, scenarios they handle, the underwriting grid behind each one. The graph view <em>is</em> the onboarding doc.</p>
+      </div>
+    </div>
+    <div class="touchpoints">
+      <span class="touchpoint">Lenders/*.md</span>
+      <span class="touchpoint">bidirectional links</span>
+      <span class="touchpoint">graph view</span>
+    </div>
+  </section>
+
+  <section class="persona">
+    <div class="persona-head">
+      <h2 class="persona-name">Compliance</h2>
+      <span class="persona-role">Guards what shouldn't leak</span>
+    </div>
+    <p class="persona-quote">Somewhere in that workbook is a plaintext password sitting two rows below a rate grid.</p>
+    <div class="compare">
+      <div class="compare-col today">
+        <span class="tag"><span class="dot"></span>Today</span>
+        <p>Every product sheet carries <em>User Name</em> / <em>Password</em> rows for lender portals, in the same cells as public rate data, with no access control between the two.</p>
+      </div>
+      <div class="compare-col tomorrow">
+        <span class="tag"><span class="dot"></span>Tomorrow</span>
+        <p>Credential rows are extracted and flagged <code>sensitive: true</code> at parse time. The RAG query layer omits them by default; the vault marks them <code>#sensitive</code> and restricts read access.</p>
+      </div>
+    </div>
+    <div class="touchpoints">
+      <span class="touchpoint">sensitive: true</span>
+      <span class="touchpoint">quarantined by default</span>
+    </div>
+  </section>
+
+  <div class="closing">
+    <h2>What has to hold for this to be trustworthy</h2>
+    <div class="stakes">
+      <div class="stake">
+        <div class="n">01</div>
+        <p><strong>Every answer traces to a row.</strong> No synthesized rate that can't be pointed back to a sheet, a cell, a date.</p>
+      </div>
+      <div class="stake">
+        <div class="n">02</div>
+        <p><strong>Confidence is visible, not implied.</strong> Typed, text, manual, inferred &mdash; the broker sees which kind of answer they got.</p>
+      </div>
+      <div class="stake">
+        <div class="n">03</div>
+        <p><strong>Updates are a form, not an edit.</strong> The YAML template is the only way in, so every change is diffed and attributed before it lands.</p>
+      </div>
+    </div>
+  </div>
+
+  <footer class="source">Source: README.md &middot; Desktop/credit-box-rag &middot; IP Loan Exchange, ~78 wholesale lenders</footer>
+
+</div>

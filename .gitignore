@@ -1,0 +1,15 @@
+# Derived/proprietary data — built locally per machine via migrate.py, never committed
+corpus/corpus.db
+corpus/corpus.json
+corpus/lenders.json
+corpus/scenarios.json
+corpus/llm_cache.json
+corpus.db
+
+# Python
+__pycache__/
+*.pyc
+.pytest_cache/
+
+# OS
+.DS_Store

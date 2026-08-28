@@ -1,0 +1,173 @@
+{
+  "tests": [
+    {
+      "id": "baltimore-fnf-640",
+      "query": "640 FICO Baltimore fix and flip",
+      "description": "Baltimore fix-and-flip with 640 FICO",
+      "expect_lenders": ["CV3", "Constructive", "Conventus"],
+      "expect_scenarios": ["Baltimore Allowed"],
+      "min_score": 0.3,
+      "evals_must_pass": true
+    },
+    {
+      "id": "baltimore-fnf-100k",
+      "query": "100k Baltimore fix and flip",
+      "description": "Baltimore fix-and-flip with $100k loan",
+      "expect_lenders": ["CV3", "Constructive"],
+      "expect_scenarios": ["Baltimore Allowed"],
+      "min_score": 0.0,
+      "evals_must_pass": true
+    },
+    {
+      "id": "heavy-rehab",
+      "query": "heavy rehab fix and flip",
+      "description": "Heavy rehab fix-and-flip lenders",
+      "expect_lenders": ["Rain City Capital", "Groundfloor", "ROC Capital", "CV3", "FlipCo Financial"],
+      "expect_scenarios": ["Heavy rehab"],
+      "min_score": 0.0,
+      "evals_must_pass": true
+    },
+    {
+      "id": "no-credit-pull",
+      "query": "no credit pull fix and flip",
+      "description": "Lenders that don't pull credit for fix-and-flip",
+      "expect_lenders": ["FlipCo Financial", "Hard Money Co"],
+      "expect_scenarios": ["No credit pull"],
+      "min_score": 0.0,
+      "evals_must_pass": true
+    },
+    {
+      "id": "low-credit-600",
+      "query": "600 FICO low credit fix and flip",
+      "description": "Low FICO (600) fix-and-flip lenders",
+      "expect_lenders": ["ROC Capital", "Hard Money Co", "FlipCo Financial"],
+      "expect_scenarios": ["Low credit"],
+      "min_score": 0.0,
+      "evals_must_pass": true
+    },
+    {
+      "id": "rural-property",
+      "query": "rural appraisal fix and flip",
+      "description": "Rural property fix-and-flip lenders",
+      "expect_lenders": ["Rain City Capital", "CV3"],
+      "expect_scenarios": ["Rural FNF"],
+      "min_score": 0.0,
+      "evals_must_pass": true
+    },
+    {
+      "id": "detroit-multifamily",
+      "query": "Detroit multifamily long term",
+      "description": "Multi-family long term in Detroit",
+      "expect_lenders": ["Silver Hill", "Velocity"],
+      "expect_scenarios": [],
+      "min_score": 0.0,
+      "evals_must_pass": true
+    },
+    {
+      "id": "foreign-national",
+      "query": "foreign national fix and flip 660 FICO",
+      "description": "Foreign national fix-and-flip with 660 FICO",
+      "expect_lenders": ["CV3", "ROC Capital", "Constructive"],
+      "expect_scenarios": ["Foreign National"],
+      "min_score": 0.0,
+      "evals_must_pass": true
+    },
+    {
+      "id": "chicago-cook-restrictions",
+      "query": "Chicago Cook County restrictions",
+      "description": "Chicago/Cook County city restrictions",
+      "expect_scenarios": ["City Restrictions"],
+      "min_score": 0.0,
+      "evals_must_pass": true
+    },
+    {
+      "id": "dscr-poor-cashflow",
+      "query": "DSCR below 1.0 poor cashflow",
+      "description": "Poor cashflow DSCR lenders",
+      "expect_lenders": ["Constructive Expanded", "CV3", "Velocity", "Visio"],
+      "expect_scenarios": ["Poor Cash-flow"],
+      "min_score": 0.0,
+      "evals_must_pass": true
+    },
+    {
+      "id": "sfr-dscr-kiavi",
+      "query": "Kiavi SFR DSCR rates",
+      "description": "Kiavi SFR DSCR attributes",
+      "expect_lenders": ["Kiavi"],
+      "expect_scenarios": [],
+      "min_score": 0.0,
+      "evals_must_pass": true
+    },
+    {
+      "id": "baltimore-see-both-cv3-constructive",
+      "query": "Baltimore fix and flip",
+      "description": "Baltimore scenario should match both CV3 and Constructive",
+      "expect_lenders": ["CV3", "Constructive"],
+      "expect_scenarios": ["Baltimore Allowed"],
+      "min_score": 0.0,
+      "evals_must_pass": true
+    },
+    {
+      "id": "low-purchase-price",
+      "query": "low purchase price 75k fix and flip",
+      "description": "Low purchase price (<$100k) fix-and-flip lenders",
+      "expect_lenders": ["Rain City Capital", "ROC Capital"],
+      "expect_scenarios": ["Low purchase price"],
+      "min_score": 0.0,
+      "evals_must_pass": true
+    },
+    {
+      "id": "fast-close",
+      "query": "fast close fix and flip loan",
+      "description": "Fast closing fix-and-flip lenders",
+      "expect_lenders": ["Rain City Capital", "Wildbird", "FlipCo Financial"],
+      "expect_scenarios": ["Fast close"],
+      "min_score": 0.0,
+      "evals_must_pass": true
+    },
+    {
+      "id": "state-coverage-maryland",
+      "query": "680 FICO Maryland fix and flip",
+      "description": "State coverage: should include MD-friendly lenders",
+      "expect_lenders": ["CV3", "Constructive", "Conventus"],
+      "expect_scenarios": [],
+      "min_score": 0.0,
+      "evals_must_pass": true
+    },
+    {
+      "id": "state-coverage-nationwide-exclusions-ak",
+      "query": "680 FICO fix and flip exclude AK",
+      "description": "State coverage: nationwide ex AK lenders should not include AK-specific checks",
+      "expect_scenarios": [],
+      "min_score": 0.0,
+      "evals_must_pass": true
+    },
+    {
+      "id": "fico-tier-740",
+      "query": "740 FICO fix and flip",
+      "description": "High FICO: should match lenders with max LTV at 740",
+      "expect_scenarios": [],
+      "min_score": 0.0,
+      "evals_must_pass": true
+    },
+    {
+      "id": "exclusion-test",
+      "query": "640 FICO Baltimore fix and flip exclude Constructive",
+      "description": "Exclusion: Constructive should NOT appear",
+      "expect_lenders": ["CV3", "Conventus"],
+      "expect_scenarios": ["Baltimore Allowed"],
+      "exclude_lenders": ["Constructive"],
+      "min_score": 0.0,
+      "evals_must_pass": true
+    },
+    {
+      "id": "ltv-fico-tiered-purchase",
+      "query": "720 FICO sfr dscr",
+      "description": "ROC Capital's 80% to 740 tier means 720 hits 75%",
+      "expect_lenders": ["ROC Capital"],
+      "expect_scenarios": [],
+      "min_score": 0.0,
+      "evals_must_pass": true
+    }
+  ]
+}
