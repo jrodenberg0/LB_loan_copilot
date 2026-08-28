@@ -21,7 +21,7 @@ Two goals drove this design:
 
 ## Phase 1: Data Model Unification + Plugin Packaging
 
-Goal: one source of truth for the data, one installable Claude Code plugin. No new reasoning capability in this phase — strictly foundation.
+Goal: one source of truth for the data, one portable MCP server installable under both Claude Code and Codex CLI. No new reasoning capability in this phase — strictly foundation.
 
 ### 1. Data model unification
 
@@ -43,42 +43,49 @@ Migration is incremental and test-gated, not a rewrite:
 
 Test suite (19 regression tests + 9 evals) is the gate at every step — no swap lands unless the same 17/19 and 9/9 hold.
 
-### 2. Claude plugin packaging
+### 2. Cross-host packaging (Claude Code + Codex)
+
+**Constraint: must work with both Claude Code and Codex CLI.** Claude Code has a plugin/skill system (`.claude-plugin/plugin.json`, `skills/SKILL.md`); Codex has neither — it only speaks MCP plus a plain `AGENTS.md`/`config.toml`. The two hosts share exactly one mechanism: **MCP**. So the portable core is a single host-agnostic `mcp_server.py`, and each host gets a thin, separate adapter on top of it — not one shared plugin package.
 
 ```
 credit-box-rag/
+├── mcp_server.py               # host-agnostic stdio MCP server (official `mcp` Python SDK) — the portable core
 ├── .claude-plugin/
-│   └── plugin.json          # manifest: registers mcp_server.py + skill
-├── mcp_server.py            # stdio MCP server (official `mcp` Python SDK)
+│   └── plugin.json             # Claude Code adapter: manifest registering mcp_server.py + skill
 ├── skills/
 │   └── loan-pricing-partner/
-│       └── SKILL.md         # consolidates AGENT_TOOLS.md tool docs, R1-R5
-│                             # pushback rules, and CLAUDE_SETUP.md agent rules
+│       └── SKILL.md            # Claude Code adapter: tool-usage rules (consolidates AGENT_TOOLS.md + CLAUDE_SETUP.md rules)
+├── codex/
+│   ├── config.toml.example     # Codex adapter: mcp_servers entry pointing at mcp_server.py
+│   └── AGENTS.md.snippet       # Codex adapter: same tool-usage rules, in Codex's format (pasted into the user's AGENTS.md)
 ├── store.py
 ├── migrate.py
 ├── reason.py / llm_parse.py / agent_tools.py / query.py   # updated per above
 ├── corpus/
-│   └── city_map.json        # tracked — static config, not derived from Excel
+│   └── city_map.json           # tracked — static config, not derived from Excel
 └── (corpus.db, llm_cache.json — gitignored, built locally)
 ```
 
 - `mcp_server.py` exposes the 9 `CreditBoxAgent` methods as MCP tools 1:1 (`find_lenders`, `get_lender_profile`, `compare_lenders`, `get_fico_ltv_tiers`, `scenario_details`, `get_freshness`, `check_criteria`, `estimate_pricing`, `what_if`), plus one new tool: `ingest_excel(path)` running `migrate.py` against a user-supplied Excel file — this is the first-run setup path, driven conversationally instead of a manual shell step.
-- **Data distribution decision:** the plugin ships code-only. `corpus.db` and `llm_cache.json` are gitignored and built per-machine via `ingest_excel`, because the underlying data is derived from a private, credential-bearing Excel workbook. `city_map.json` (static suburb→metro config, not derived from the sensitive source) ships tracked.
+- **Tool-usage rules are authored once**, in `skills/loan-pricing-partner/SKILL.md`, and mechanically mirrored into `codex/AGENTS.md.snippet` (same content, Codex's plain-markdown convention instead of skill frontmatter) so the two hosts never drift into different agent behavior.
+- **Claude Code adapter**: `.claude-plugin/plugin.json` (fields: `name`, `description`, `version`, `author` — confirmed against the current plugin manifest schema) + `skills/` directory, installed via `--plugin-dir` for local testing or a marketplace for distribution.
+- **Codex adapter**: no plugin system exists, so distribution is a documented manual step — `codex/config.toml.example` shows the `mcp_servers` block to copy into the user's Codex config, pointing at `mcp_server.py`; `codex/AGENTS.md.snippet` shows the block to paste into the user's `AGENTS.md`.
+- **Data distribution decision:** neither adapter ships data. `corpus.db` and `llm_cache.json` are gitignored and built per-machine via `ingest_excel`, because the underlying data is derived from a private, credential-bearing Excel workbook. `city_map.json` (static suburb→metro config, not derived from the sensitive source) ships tracked.
 - Credential handling is unchanged from the current system (values are tagged `sensitive` at ingestion and already excluded from agent-facing output) — worth re-verifying once `store.py` lands, not redesigning.
 
 ### 3. Testing / validation
 
 - Existing 19 regression tests + 9 evals remain the acceptance bar through every incremental swap (2 known failures excluded per scope decision).
 - New: a `store.py` smoke test — round-trip known lenders/attributes and confirm identical output to the old `_db()` path before it's deleted.
-- New: MCP server smoke test — list tools, call `find_lenders` with a known query, assert parity with `query.py`'s result.
-- New: fresh-clone plugin smoke test — `git clone` → `ingest_excel` against a sample Excel → `find_lenders` returns results. This is the actual "does it work on another machine" check.
+- New: MCP server smoke test — list tools, call `find_lenders` with a known query, assert parity with `query.py`'s result. Run once, used by both host adapters (no host-specific server logic to duplicate-test).
+- New: fresh-clone smoke test — `git clone` → `ingest_excel` against a sample Excel → `find_lenders` returns results, run against both the Claude Code adapter (`--plugin-dir`) and a local Codex config pointed at `mcp_server.py`. This is the actual "does it work on another machine, with either tool" check.
 
 ### 4. Rollout order
 
 1. `git init` in `credit-box-rag/` — done (baseline commit captures pre-surgery state).
 2. Data model unification, steps 1–7 above, committing after each verified swap.
-3. Plugin packaging, built on the unified store.
-4. Final smoke test: fresh clone + `ingest_excel` + a handful of `query.py`/MCP calls.
+3. Build `mcp_server.py` (host-agnostic core), then the two thin adapters on top of it.
+4. Final smoke test: fresh clone + `ingest_excel` + a handful of `query.py`/MCP calls, verified under both Claude Code and Codex.
 
 ## Phase 2: Loan Copilot Reasoning Architecture (roadmap, not yet scheduled)
 
