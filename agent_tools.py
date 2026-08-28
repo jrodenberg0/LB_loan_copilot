@@ -18,6 +18,7 @@ from collections import defaultdict
 
 from reason import CreditBoxEngine
 from llm_parse import state_includes, fico_matches, parse_fico_ltv_tiers, parse_state_coverage
+import store
 
 CORPUS_DIR = Path(__file__).parent / "corpus"
 
@@ -30,10 +31,8 @@ class CreditBoxAgent:
     def _load_cache(self):
         cp = CORPUS_DIR / "llm_cache.json"
         self.cache = json.loads(cp.read_text()) if cp.exists() else {}
-        cp2 = CORPUS_DIR / "corpus.json"
-        self.corpus = json.loads(cp2.read_text())
-        self.lenders = json.loads((CORPUS_DIR / "lenders.json").read_text())
-        self.scenarios = json.loads((CORPUS_DIR / "scenarios.json").read_text())
+        self.lenders = store.get_lenders_index()
+        self.scenarios = store.get_scenarios()
 
     # --- Tool 1: Find lenders ---
 
@@ -63,11 +62,7 @@ class CreditBoxAgent:
 
     def get_lender_profile(self, lender: str, product: str = None) -> dict:
         """All attributes for a lender, optionally by product."""
-        records = [
-            r for r in self.corpus["records"]
-            if r["lender_canonical"].lower() == lender.lower()
-            and (not product or r["product"] == product)
-        ]
+        records = store.get_lender_records(lender, product)
         if not records:
             return {"error": f"Lender '{lender}' not found"}
         by_prod = defaultdict(list)
@@ -116,12 +111,11 @@ class CreditBoxAgent:
 
     def get_fico_ltv_tiers(self, lender: str, product: str = None) -> dict:
         """Structured FICO/LTV tier data for a lender."""
+        all_records = store.get_lender_records(lender, product)
         records = [
-            r for r in self.corpus["records"]
-            if r["lender_canonical"].lower() == lender.lower()
-            and r["attr_name"] in ("fico_at_max_ltv", "fico_qualification",
-                                    "dscr_range", "ltv_purchase_max", "ltv_cashout_max")
-            and (not product or r["product"] == product)
+            r for r in all_records
+            if r["attr_name"] in ("fico_requirement_at_max_ltv", "fico_qualification",
+                                    "dscr_range", "max__ltv_purchase", "max__ltv_cash_out_refi")
         ]
         tiers = {}
         for r in records:
@@ -141,7 +135,7 @@ class CreditBoxAgent:
 
     def scenario_details(self, scenario_text: str) -> dict:
         """Full recommendation text for a scenario."""
-        for s in self.corpus.get("scenarios", []):
+        for s in self.scenarios:
             if scenario_text.lower() in s["condition"].lower():
                 return {
                     "scenario": s["condition"],
@@ -153,7 +147,7 @@ class CreditBoxAgent:
                     ],
                 }
         # Fuzzy match
-        for s in self.corpus.get("scenarios", []):
+        for s in self.scenarios:
             if any(w in s["condition"].lower() for w in scenario_text.lower().split()):
                 return self.scenario_details(s["condition"])
         return {"error": f"Scenario '{scenario_text}' not found"}
@@ -161,20 +155,7 @@ class CreditBoxAgent:
     # --- Tool 6: Freshness ---
 
     def get_freshness(self) -> dict:
-        meta = self.corpus.get("meta", {})
-        age = meta.get("file_age_days", 0)
-        return {
-            "source": meta.get("source", ""),
-            "file_mtime": meta.get("file_mtime", ""),
-            "file_age_days": age,
-            "parsed": meta.get("generated", ""),
-            "n_records": len(self.corpus.get("records", [])),
-            "n_lenders": len(self.lenders),
-            "n_scenarios": len(self.corpus.get("scenarios", [])),
-            "fresh": age < 30,
-            "stale": age >= 30,
-            "critically_stale": age >= 90,
-        }
+        return store.get_freshness()
 
     # --- Tool 7: Check criteria ---
 
