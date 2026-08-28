@@ -180,7 +180,7 @@ class CreditBoxAgent:
 
         fico = criteria.get("fico")
         if fico:
-            for attr in ("fico_at_max_ltv",):
+            for attr in ("fico_requirement_at_max_ltv",):
                 tp = self.engine.parsed_fico_tiers.get((lender, product or "", attr))
                 if tp:
                     matched, why, _ = fico_matches(tp, fico)
@@ -212,8 +212,8 @@ class CreditBoxAgent:
 
         # Find applicable LTV tier
         applicable_tier = None
-        if fico and "fico_at_max_ltv" in tiers.get("tiers", {}):
-            matched, why, tier = fico_matches(tiers["tiers"]["fico_at_max_ltv"], fico)
+        if fico and "fico_requirement_at_max_ltv" in tiers.get("tiers", {}):
+            matched, why, tier = fico_matches(tiers["tiers"]["fico_requirement_at_max_ltv"], fico)
             if tier:
                 applicable_tier = tier
 
@@ -238,13 +238,13 @@ class CreditBoxAgent:
                   "notes": []}
 
         # Add tier-based notes
-        if fico and "fico_at_max_ltv" in tiers.get("tiers", {}):
-            note = tiers["tiers"]["fico_at_max_ltv"].get("notes", "")
+        if fico and "fico_requirement_at_max_ltv" in tiers.get("tiers", {}):
+            note = tiers["tiers"]["fico_requirement_at_max_ltv"].get("notes", "")
             if note:
                 result["notes"].append(f"FICO condition: {note}")
         if ltv:
             # Check if ltv falls within stated max
-            for attr in ("ltv_purchase_max", "ltv_cashout_max"):
+            for attr in ("max__ltv_purchase", "max__ltv_cash_out_refi"):
                 if attr in tiers.get("tiers", {}):
                     t = tiers["tiers"][attr]
                     for tier in t.get("tiers", []):

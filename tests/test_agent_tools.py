@@ -22,3 +22,22 @@ def test_no_credentials_leak_unflagged():
     for attr_name, info in profile["products"]["sfr_dscr"].items():
         if attr_name in ("user_name", "password"):
             assert info["sensitive"] is True
+
+def test_check_criteria_fico_branch_fires():
+    agent = CreditBoxAgent()
+    result = agent.check_criteria("CV3", "sfr_dscr", {"fico": 700})
+    # Before the fix, the FICO check silently never appended to result["checks"]
+    # because it looked up a nonexistent attribute name ("fico_at_max_ltv").
+    fico_checks = [c for c in result["checks"] if "FICO" in c["criterion"]]
+    assert len(fico_checks) > 0
+    assert fico_checks[0]["pass"] is True
+
+def test_estimate_pricing_ltv_tier_notes_fire():
+    agent = CreditBoxAgent()
+    # ROC Capital/sfr_dscr has max__ltv_purchase (80%, min_fico 740) and
+    # max__ltv_cash_out_refi (75%, min_fico 720) tiers in corpus.db.
+    result = agent.estimate_pricing("ROC Capital", "sfr_dscr", ltv=75, fico=700)
+    # Before the fix, LTV-tier notes never appeared because the lookup used
+    # nonexistent attribute names ("ltv_purchase_max"/"ltv_cashout_max").
+    assert any("max__ltv_purchase" in note for note in result["notes"])
+    assert any("max__ltv_cash_out_refi" in note for note in result["notes"])
