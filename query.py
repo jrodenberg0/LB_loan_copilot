@@ -199,7 +199,7 @@ def cmd_show_tiers(args):
     name = " ".join(args)
     cache = json.loads((CORPUS_DIR / "llm_cache.json").read_text())
 
-    tier_attrs = ["fico_requirement_at_max_ltv", "fico_qualification", "dscr_range",
+    tier_attrs = ["fico_requirement_at_max_ltv", "fico_qualification", "dscr__prop_dti_min_max",
                    "max__ltv_purchase", "max__ltv_cash_out_refi"]
 
     print(f"\n{'='*60}")

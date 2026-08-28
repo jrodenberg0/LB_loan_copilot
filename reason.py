@@ -144,7 +144,7 @@ class CreditBoxEngine:
                 if attr_name == "state_coverage":
                     raw = str(recs[0]["attr_value"]).strip()
                     self.parsed_states[(lc, prod)] = parse_state_coverage(raw)
-                elif attr_name in ("fico_requirement_at_max_ltv", "fico_qualification", "dscr_range",
+                elif attr_name in ("fico_requirement_at_max_ltv", "fico_qualification", "dscr__prop_dti_min_max",
                                     "max__ltv_purchase", "max__ltv_cash_out_refi"):
                     raw = str(recs[0]["attr_value"]).strip()
                     self.parsed_fico_tiers[(lc, prod, attr_name)] = parse_fico_ltv_tiers(raw, attr_name)

@@ -115,7 +115,7 @@ class CreditBoxAgent:
         records = [
             r for r in all_records
             if r["attr_name"] in ("fico_requirement_at_max_ltv", "fico_qualification",
-                                    "dscr_range", "max__ltv_purchase", "max__ltv_cash_out_refi")
+                                    "dscr__prop_dti_min_max", "max__ltv_purchase", "max__ltv_cash_out_refi")
         ]
         tiers = {}
         for r in records:
